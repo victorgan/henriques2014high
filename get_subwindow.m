@@ -1,14 +1,10 @@
-function out = get_subwindow(im, pos, sz, cos_window)
+function out = get_subwindow(im, pos, sz)
 %GET_SUBWINDOW Obtain sub-window from image, with replication-padding.
 %   Returns sub-window of image IM centered at POS ([y, x] coordinates),
 %   with size SZ ([height, width]). If any pixels are outside of the image,
 %   they will replicate the values at the borders.
 %
-%   The subwindow is also normalized to range -0.5 .. 0.5, and the given
-%   cosine window COS_WINDOW is applied (though this part could be omitted
-%   to make the function more general).
-%
-%   João F. Henriques, 2012
+%   Joao F. Henriques, 2014
 %   http://www.isr.uc.pt/~henriques/
 
 	if isscalar(sz),  %square sub-window
@@ -27,10 +23,6 @@ function out = get_subwindow(im, pos, sz, cos_window)
 	
 	%extract image
 	out = im(ys, xs, :);
-	
-	%pre-process window
-	out = double(out) / 255 - 0.5;  %normalize to range -0.5 .. 0.5
-	out = cos_window .* out;  %apply cosine window
 
 end
 

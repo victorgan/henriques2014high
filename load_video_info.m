@@ -1,24 +1,42 @@
-function [img_files, pos, target_sz, resize_image, ground_truth, ...
-	video_path] = load_video_info(video_path)
+function [img_files, pos, target_sz, ground_truth, video_path] = load_video_info(base_path, video)
 %LOAD_VIDEO_INFO
 %   Loads all the relevant information for the video in the given path:
 %   the list of image files (cell array of strings), initial position
-%   (1x2), target size (1x2), whether to resize the video to half
-%   (boolean), and the ground truth information for precision calculations
-%   (Nx2, for N frames). The ordering of coordinates is always [y, x].
+%   (1x2), target size (1x2), the ground truth information for precision
+%   calculations (Nx2, for N frames), and the path where the images are
+%   located. The ordering of coordinates and sizes is always [y, x].
 %
-%   The path to the video is returned, since it may change if the images
-%   are located in a sub-folder (as is the default for MILTrack's videos).
-%
-%   João F. Henriques, 2012
+%   Joao F. Henriques, 2014
 %   http://www.isr.uc.pt/~henriques/
 
-	%load ground truth from text file (MILTrack's format)
-	text_files = dir([video_path '*_gt.txt']);
-	assert(~isempty(text_files), 'No initial position and ground truth (*_gt.txt) to load.')
 
-	f = fopen([video_path text_files(1).name]);
-	ground_truth = textscan(f, '%f,%f,%f,%f');  %[x, y, width, height]
+	%see if there's a suffix, specifying one of multiple targets, for
+	%example the dot and number in 'Jogging.1' or 'Jogging.2'.
+	if numel(video) >= 2 && video(end-1) == '.' && ~isnan(str2double(video(end))),
+		suffix = video(end-1:end);  %remember the suffix
+		video = video(1:end-2);  %remove it from the video name
+	else
+		suffix = '';
+	end
+
+	%full path to the video's files
+	if base_path(end) ~= '/' && base_path(end) ~= '\',
+		base_path(end+1) = '/';
+	end
+	video_path = [base_path video '/'];
+
+	%try to load ground truth from text file (Benchmark's format)
+	filename = [video_path 'groundtruth_rect' suffix '.txt'];
+	f = fopen(filename);
+	assert(f ~= -1, ['No initial position or ground truth to load ("' filename '").'])
+	
+	%the format is [x, y, width, height]
+	try
+		ground_truth = textscan(f, '%f,%f,%f,%f', 'ReturnOnError',false);  
+	catch  %#ok, try different format (no commas)
+		frewind(f);
+		ground_truth = textscan(f, '%f %f %f %f');  
+	end
 	ground_truth = cat(2, ground_truth{:});
 	fclose(f);
 	
@@ -26,54 +44,49 @@ function [img_files, pos, target_sz, resize_image, ground_truth, ...
 	target_sz = [ground_truth(1,4), ground_truth(1,3)];
 	pos = [ground_truth(1,2), ground_truth(1,1)] + floor(target_sz/2);
 	
-	%interpolate missing annotations, and store positions instead of boxes
-	try
-		ground_truth = interp1(1 : 5 : size(ground_truth,1), ...
-			ground_truth(1:5:end,:), 1:size(ground_truth,1));
-		ground_truth = ground_truth(:,[2,1]) + ground_truth(:,[4,3]) / 2;
-	catch  %#ok, wrong format or we just don't have ground truth data.
+	if size(ground_truth,1) == 1,
+		%we have ground truth for the first frame only (initial position)
 		ground_truth = [];
+	else
+		%store positions instead of boxes
+		ground_truth = ground_truth(:,[2,1]) + ground_truth(:,[4,3]) / 2;
 	end
 	
-	%list all frames. first, try MILTrack's format, where the initial and
-	%final frame numbers are stored in a text file. if it doesn't work,
-	%try to load all png/jpg files in the folder.
 	
-	text_files = dir([video_path '*_frames.txt']);
-	if ~isempty(text_files),
-		f = fopen([video_path text_files(1).name]);
-		frames = textscan(f, '%f,%f');
-		fclose(f);
-		
-		%see if they are in the 'imgs' subfolder or not
-		if exist([video_path num2str(frames{1}, 'imgs/img%05i.png')], 'file'),
-			video_path = [video_path 'imgs/'];
-		elseif ~exist([video_path num2str(frames{1}, 'img%05i.png')], 'file'),
-			error('No image files to load.')
-		end
-		
-		%list the files
-		img_files = num2str((frames{1} : frames{2})', 'img%05i.png');
-		img_files = cellstr(img_files);
-	else
-		%no text file, just list all images
+	%from now on, work in the subfolder where all the images are
+	video_path = [video_path 'img/'];
+	
+	%for these sequences, we must limit ourselves to a range of frames.
+	%for all others, we just load all png/jpg files in the folder.
+	frames = {'David', 300, 770;
+			  'Football1', 1, 74;
+			  'Freeman3', 1, 460;
+			  'Freeman4', 1, 283};
+	
+	idx = find(strcmpi(video, frames(:,1)));
+	
+	if isempty(idx),
+		%general case, just list all images
 		img_files = dir([video_path '*.png']);
 		if isempty(img_files),
 			img_files = dir([video_path '*.jpg']);
 			assert(~isempty(img_files), 'No image files to load.')
 		end
 		img_files = sort({img_files.name});
-	end
-	
-	
-	%if the target is too large, use a lower resolution - no need for so
-	%much detail
-	if sqrt(prod(target_sz)) >= 100,
-		pos = floor(pos / 2);
-		target_sz = floor(target_sz / 2);
-		resize_image = true;
 	else
-		resize_image = false;
+		%list specified frames. try png first, then jpg.
+		if exist(sprintf('%s%04i.png', video_path, frames{idx,2}), 'file'),
+			img_files = num2str((frames{idx,2} : frames{idx,3})', '%04i.png');
+			
+		elseif exist(sprintf('%s%04i.jpg', video_path, frames{idx,2}), 'file'),
+			img_files = num2str((frames{idx,2} : frames{idx,3})', '%04i.jpg');
+			
+		else
+			error('No image files to load.')
+		end
+		
+		img_files = cellstr(img_files);
 	end
+	
 end
 
