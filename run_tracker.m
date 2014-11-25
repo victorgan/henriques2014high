@@ -39,8 +39,11 @@
 
 function [precision, fps] = run_tracker(video, kernel_type, feature_type, show_visualization, show_plots)
 
+    % ==============================
+    % Default Values
+    % ==============================
 	%path to the videos (you'll be able to choose one with the GUI).
-    base_path = 'C:\Code\Datasets\wu2013visual\data\Benchmark';
+    BASE_PATH = 'C:\Code\Datasets\wu2013visual\data\Benchmark';
 
 	%default settings
 	if nargin < 1, video = 'choose'; end
@@ -49,69 +52,60 @@ function [precision, fps] = run_tracker(video, kernel_type, feature_type, show_v
 	if nargin < 4, show_visualization = ~strcmp(video, 'all'); end
 	if nargin < 5, show_plots = ~strcmp(video, 'all'); end
 
-
 	%parameters according to the paper. at this point we can override
 	%parameters based on the chosen kernel or feature type
 	kernel.type = kernel_type;
-	
 	features.gray = false;
 	features.hog = false;
-	
 	padding = 1.5;  %extra area surrounding the target
 	lambda = 1e-4;  %regularization
 	output_sigma_factor = 0.1;  %spatial bandwidth (proportional to target)
 	
+    % ==============================
+    % Error Checking
+    % ==============================
 	switch feature_type
 	case 'gray',
 		interp_factor = 0.075;  %linear interpolation factor for adaptation
-
 		kernel.sigma = 0.2;  %gaussian kernel bandwidth
-		
 		kernel.poly_a = 1;  %polynomial kernel additive term
 		kernel.poly_b = 7;  %polynomial kernel exponent
-	
 		features.gray = true;
 		cell_size = 1;
-		
 	case 'hog',
 		interp_factor = 0.02;
-		
 		kernel.sigma = 0.5;
-		
 		kernel.poly_a = 1;
 		kernel.poly_b = 9;
-		
 		features.hog = true;
 		features.hog_orientations = 9;
 		cell_size = 4;
-		
 	otherwise
 		error('Unknown feature.')
 	end
 
+    isValidKernel = any(strcmp(kernel_type, {'linear', 'polynomial', 'gaussian'}));
+	assert(isValidKernel, 'Unknown kernel.')
 
-	assert(any(strcmp(kernel_type, {'linear', 'polynomial', 'gaussian'})), 'Unknown kernel.')
 
-
+    % ==============================
+    % Video Specified?
+    % ==============================
 	switch video
 	case 'choose',
 		%ask the user for the video, then call self with that video name.
-		video = choose_video(base_path);
+		video = choose_video(BASE_PATH);
 		if ~isempty(video),
 			[precision, fps] = run_tracker(video, kernel_type, ...
 				feature_type, show_visualization, show_plots);
-			
 			if nargout == 0,  %don't output precision as an argument
 				clear precision
 			end
 		end
-		
-		
 	case 'all',
 		%all videos, call self with each video name.
-		
 		%only keep valid directory names
-		dirs = dir(base_path);
+		dirs = dir(BASE_PATH);
 		videos = {dirs.name};
 		videos(strcmp('.', videos) | strcmp('..', videos) | ...
 			strcmp('anno', videos) | ~[dirs.isdir]) = [];
@@ -150,7 +144,6 @@ function [precision, fps] = run_tracker(video, kernel_type, feature_type, show_v
 			precision = mean_precision;
 		end
 		
-		
 	case 'benchmark',
 		%running in benchmark mode - this is meant to interface easily
 		%with the benchmark's code.
@@ -176,19 +169,16 @@ function [precision, fps] = run_tracker(video, kernel_type, feature_type, show_v
 		res.res = rects;
 		assignin('base', 'res', res);
 		
-		
 	otherwise
 		%we were given the name of a single video to process.
 	
 		%get image file names, initial state, and ground truth for evaluation
-		[img_files, pos, target_sz, ground_truth, video_path] = load_video_info(base_path, video);
-		
+		[img_files, pos, target_sz, ground_truth, video_path] = load_video_info(BASE_PATH, video);
 		
 		%call tracker function with all the relevant parameters
 		[positions, time] = tracker(video_path, img_files, pos, target_sz, ...
 			padding, kernel, lambda, output_sigma_factor, interp_factor, ...
 			cell_size, features, show_visualization);
-		
 		
 		%calculate and show precision plot, as well as frames-per-second
 		precisions = precision_plot(positions, ground_truth, video, show_plots);

@@ -6,9 +6,13 @@ function [img_files, pos, target_sz, ground_truth, video_path] = load_video_info
 %   calculations (Nx2, for N frames), and the path where the images are
 %   located. The ordering of coordinates and sizes is always [y, x].
 %
-%   Joao F. Henriques, 2014
-%   http://www.isr.uc.pt/~henriques/
-
+% N = number of frames in the video
+% coordinate ordering is [y, x]
+% img_files   [1 x N] cell array of strings image filenames
+% pos         [1 x 2] initial position
+% target_sz [1 x 2] target size (heght x width)
+% ground_truth [N x 2] positions of ground truth for precision calculation
+% video_path [string] 
 
 	%see if there's a suffix, specifying one of multiple targets, for
 	%example the dot and number in 'Jogging.1' or 'Jogging.2'.
