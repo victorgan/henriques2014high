@@ -40,7 +40,6 @@
 function [precision, fps] = run_tracker(video, kernel_type, feature_type, show_visualization, show_plots)
 
 	%path to the videos (you'll be able to choose one with the GUI).
-	base_path = './data/Benchmark/';
     base_path = 'C:\Code\Datasets\wu2013visual\data\Benchmark';
 
 	%default settings
