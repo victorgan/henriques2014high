@@ -1,8 +1,15 @@
-%notation: variables ending with f are in the frequency domain.
+
+%  Exploiting the Circulant Structure of Tracking-by-detection with Kernels
+%
+%  Main script for tracking, with a gaussian kernel.
+%
+%  João F. Henriques, 2012
+%  http://www.isr.uc.pt/~henriques/
+
 
 %choose the path to the videos (you'll be able to choose one with the GUI)
-BASE_PATH = './data/';
-BASE_PATH = 'C:\Code\Datasets\wu2013visual\data\Benchmark'
+base_path = './data/';
+
 
 %parameters according to the paper
 padding = 1;					%extra area surrounding the target
@@ -11,10 +18,13 @@ sigma = 0.2;					%gaussian kernel bandwidth
 lambda = 1e-2;					%regularization
 interp_factor = 0.075;			%linear interpolation factor for adaptation
 
-%ask the user for the video
-video_path = choose_video(BASE_PATH);
-if isempty(video_path), return, end  %user cancelled
 
+
+%notation: variables ending with f are in the frequency domain.
+
+%ask the user for the video
+video_path = choose_video(base_path);
+if isempty(video_path), return, end  %user cancelled
 [img_files, pos, target_sz, resize_image, ground_truth, video_path] = ...
 	load_video_info(video_path);
 

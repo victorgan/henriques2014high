@@ -5,8 +5,6 @@ function video_path = choose_video(base_path)
 %
 %   João F. Henriques, 2012
 %   http://www.isr.uc.pt/~henriques/
-% base_path [string]
-% video     [string]
 
 	%process path to make sure it's uniform
 	if ispc(), base_path = strrep(base_path, '\', '/'); end
