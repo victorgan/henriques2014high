@@ -30,7 +30,7 @@ function x = get_features(im, features, cell_size, cos_window)
 		
 		x = x - mean(x(:));
 	end
-	
+	x(:,:,end+1:end+3) = 0;
 	%process with cosine window if needed
 	if ~isempty(cos_window),
 		x = bsxfun(@times, x, cos_window);

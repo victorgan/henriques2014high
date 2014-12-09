@@ -67,7 +67,7 @@ function [positions, runtime] = tracker(video_path, img_files, pos, target_sz, .
 
 	for frame = 1:numel(img_files),
 		%load and preprocess image
-		im = imread( fullfile(video_path, img_files{frame}) );
+		im = imread([video_path img_files{frame}]);
 		if size(im,3) > 1,
 			im = rgb2gray(im);
 		end
@@ -87,7 +87,7 @@ function [positions, runtime] = tracker(video_path, img_files, pos, target_sz, .
 			zf = fft2(get_features(patch, features, cell_size, cos_window));
 			
 			%calculate response of the classifier at all shifts
-			switch kernel.type
+            switch kernel.type
 			case 'gaussian',
 				kzf = gaussian_correlation(zf, model_xf, kernel.sigma);
 			case 'polynomial',

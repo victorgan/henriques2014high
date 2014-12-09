@@ -37,7 +37,7 @@ function [img_files, pos, target_sz, ground_truth, video_path] = load_video_info
 	%the format is [x, y, width, height]
 	try
 		ground_truth = textscan(f, '%f,%f,%f,%f', 'ReturnOnError',false);  
-	catch  %#ok, try different format (no commas)
+	catch  %ok, try different format (no commas)
 		frewind(f);
 		ground_truth = textscan(f, '%f %f %f %f');  
 	end
