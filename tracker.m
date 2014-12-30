@@ -42,22 +42,22 @@ function [positions, runtime] = tracker(video_path, img_files, pos, target_sz, .
  	window_sz = floor(target_sz * (1 + padding));
 % 	%we could choose a size that is a power of two, for better FFT
 % 	%performance. in practice it is slower, due to the larger window size.
-	window_sz = 2 .^ nextpow2(window_sz);
+	% window_sz = 2 .^ nextpow2(window_sz);
 	
-	%create regression labels, gaussian shaped, with a bandwidth
+	%create regression labels yf, gaussian shaped, with a bandwidth
 	%proportional to target size
 	output_sigma = sqrt(prod(target_sz)) * output_sigma_factor / cell_size;
 	yf = fft2(gaussian_shaped_labels(output_sigma, floor(window_sz / cell_size)));
 
-	%store pre-computed cosine window
+	% store pre-computed cosine window to avoid non-periodic window
+    % Sec 4.1 in henriques2012exploiting
 	cos_window = hann(size(yf,1)) * hann(size(yf,2))';	
 	
 	if show_visualization,  %create video interface
 		update_visualization = show_video(img_files, video_path, isResized);
 	end
 	
-	
-	%note: variables ending with 'f' are in the Fourier domain.
+	% note: variables ending with 'f' are in the Fourier domain.
 
     % ---------------------------------------------------
     % initialize outputs 
