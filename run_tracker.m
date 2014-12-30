@@ -43,8 +43,14 @@ function [precision, fps] = run_tracker(video, kernel_type, feature_type, show_v
     % Default Values
     % ==============================
 	%path to the videos (you'll be able to choose one with the GUI).
-    % BASE_PATH = 'C:\Code\Datasets\wu2013visual\data\Benchmark';
-    BASE_PATH = 'C:\Code\Datasets\song2013tracking\ValidationSet\ValidationSet';
+    DATASET = 'wu';
+%     DATASET = 'song';
+    switch DATASET
+    case 'wu'
+        BASE_PATH = 'C:\Code\Datasets\wu2013visual\data\Benchmark';
+    case 'song'
+        BASE_PATH = 'C:\Code\Datasets\song2013tracking\ValidationSet\ValidationSet';
+    end
 
 	%default settings
 	if nargin < 1, video = 'choose'; end
@@ -106,14 +112,24 @@ function [precision, fps] = run_tracker(video, kernel_type, feature_type, show_v
 	otherwise
 		%we were given the name of a single video to process.
 	
-		%get image file names, initial state, and ground truth for evaluation
-		[img_files, pos, target_sz, ground_truth, video_path] = load_video_info(BASE_PATH, video);
 
-        % Hack to load Song's RGBD  images
-        rgbFolderName = 'img';
-        sequencePath = fullfile(BASE_PATH, video);
-        img_files = loadImageFiles(sequencePath);
-        video_path = fullfile(sequencePath, rgbFolderName);
+        % BASE_PATH/video/rgbFolderName/img_files{1}.jpg
+        % sequencePath/rgbFolderName/img_files{1}.jpg
+        sequencePath = fullfile(BASE_PATH, video); % BASE_PATH/video
+
+		%get image file names, initial state, and ground truth for evaluation
+        switch DATASET
+        case 'wu'
+            rgbFolderName = 'img';
+            rgbVideoPath = fullfile(sequencePath, rgbFolderName); % BASE_PATH/video/rgbFolderName 
+            [pos, target_sz, ground_truth] = load_video_info(BASE_PATH, video);
+            img_files = getImagePaths( rgbVideoPath, video ); 
+        case 'song'
+            rgbFolderName = 'rgb';
+            rgbVideoPath = fullfile(sequencePath, rgbFolderName); % BASE_PATH/video/rgbFolderName 
+            img_files = loadImageFiles(sequencePath); 
+            [pos, target_sz, ground_truth] = loadGroundTruth(BASE_PATH, video);
+        end
 		
 		%call tracker function with all the relevant parameters
         % From load_video_info:
@@ -134,7 +150,7 @@ function [precision, fps] = run_tracker(video, kernel_type, feature_type, show_v
         % From Input
             % show_visualization
 		[positions, runtime] = tracker(...
-            video_path, img_files, pos, target_sz, ...
+            rgbVideoPath, img_files, pos, target_sz, ...
 			padding, kernel, lambda, output_sigma_factor, interp_factor, ...
 			cell_size, features, show_visualization...
             );
