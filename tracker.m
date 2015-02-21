@@ -68,9 +68,6 @@ function [positions, runtime] = tracker(video_path, img_files, pos, target_sz, .
 	for frame = 1:numel(img_files),
 		%load and preprocess image
 		im = imread( fullfile(video_path, img_files{frame}) );
-		if size(im,3) > 1,
-			im = rgb2gray(im);
-		end
 		if isResized,
 			im = imresize(im, 0.5);
 		end
@@ -78,7 +75,7 @@ function [positions, runtime] = tracker(video_path, img_files, pos, target_sz, .
 		tic()
 
         % ---------------------------------------------------
-        % Get new pos
+        % Get pos: detect the object in frame
         % ---------------------------------------------------
 		if frame > 1,
 			%obtain a subwindow for detection at the position from last
@@ -87,6 +84,7 @@ function [positions, runtime] = tracker(video_path, img_files, pos, target_sz, .
 			zf = fft2(get_features(patch, features, cell_size, cos_window));
 			
 			%calculate response of the classifier at all shifts
+            % The 'detect' function in algorithm 1 p. 8, henriques2015tracking
 			switch kernel.type
 			case 'gaussian',
 				kzf = gaussian_correlation(zf, model_xf, kernel.sigma);
@@ -112,7 +110,7 @@ function [positions, runtime] = tracker(video_path, img_files, pos, target_sz, .
 		end % if frame > 1,
 
         % ---------------------------------------------------
-        % Get new model_xf
+        % Get model_xf: given the detection 'pos', train model.
         % ---------------------------------------------------
 		%obtain a subwindow for training at newly estimated target position
 		patch = get_subwindow(im, pos, window_sz);
@@ -127,7 +125,9 @@ function [positions, runtime] = tracker(video_path, img_files, pos, target_sz, .
 		case 'linear',
 			kf = linear_correlation(xf, xf);
         end % switch
-		alphaf = yf ./ (kf + lambda);   %equation for fast training
+
+        % Equation 17 in henriques2015tracking
+		alphaf = yf ./ (kf + lambda);   %equation for fast training,
 
 		if frame == 1,  %first frame, train with a single image
 			model_alphaf = alphaf;

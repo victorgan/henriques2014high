@@ -43,9 +43,9 @@ function update_visualization_func = show_video(img_files, video_path, resize_im
 	function redraw(frame)
 		%render main image
 		im = imread( fullfile(video_path, img_files{frame}) );
-		if size(im,3) > 1,
-			im = rgb2gray(im);
-		end
+		% if size(im,3) > 1,
+		% 	im = rgb2gray(im);
+		% end
 		if resize_image,
 			im = imresize(im, 0.5);
 		end

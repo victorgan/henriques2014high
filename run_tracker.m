@@ -109,6 +109,64 @@ function [precision, fps] = run_tracker(video, kernel_type, feature_type, show_v
 				clear precision
 			end
 		end
+	case 'all',
+		%all videos, call self with each video name.
+		
+		%only keep valid directory names
+		dirs = dir(BASE_PATH);
+		videos = {dirs.name};
+		videos(strcmp('.', videos) | strcmp('..', videos) | ...
+			strcmp('anno', videos) | ~[dirs.isdir]) = [];
+		
+		%the 'Jogging' sequence has 2 targets, create one entry for each.
+		%we could make this more general if multiple targets per video
+		%becomes a common occurence.
+		% videos(strcmpi('Jogging', videos)) = [];
+		% videos(end+1:end+2) = {'Jogging.1', 'Jogging.2'};
+		
+        numVideos = numel(videos);
+		all_precisions = cell(numVideos,1);  %to compute averages
+		all_fps = zeros(numVideos,1);
+		
+		if ~exist('matlabpool', 'file'),
+			%no parallel toolbox, use a simple 'for' to iterate
+			for k = 1:numel(videos),
+				[all_precisions{k}, all_fps(k)] = run_tracker(videos{k}, ...
+					kernel_type, feature_type, show_visualization, show_plots);
+			end
+		else
+			%evaluate trackers for all videos in parallel
+			if matlabpool('size') == 0,
+				matlabpool open;
+			end
+			parfor k = 1:numel(videos),
+				[all_precisions{k}, all_fps(k)] = run_tracker(videos{k}, ...
+					kernel_type, feature_type, show_visualization, show_plots);
+			end
+		end
+		
+		%compute average precision at 20px, and FPS
+        for v = 1:numVideos
+            precision20(v) = all_precisions{v}(20);
+        end
+		mean_precision = mean(precision20);
+		fps = mean(all_fps);
+		fprintf('\nAverage precision (20px):% 1.3f, Average FPS:% 4.2f\n\n', mean_precision, fps)
+		if nargout > 0,
+			precision = mean_precision;
+        end
+        
+        avgPrecision = zeros( size(all_precisions{v}) );
+        for v = 1:numVideos
+            avgPrecision = avgPrecision + all_precisions{v};
+        end
+        avgPrecision = avgPrecision / numVideos;
+        save('C:\Code\personal\004charmander\precisionsX.mat','all_precisions','avgPrecision');
+
+        % plot precisions
+		figure('Number','off', 'Name',['Precisions - Average'])
+		plot(avgPrecision, 'k-', 'LineWidth',2)
+		xlabel('Threshold'), ylabel('Precision')
 	otherwise
 		%we were given the name of a single video to process.
 	
@@ -167,7 +225,8 @@ function [precision, fps] = run_tracker(video, kernel_type, feature_type, show_v
 		fprintf('%12s - Precision (20px):% 1.3f, FPS:% 4.2f\n', video, precisions(20), fps)
 		if nargout > 0,
 			%return precisions at a 20 pixels threshold
-			precision = precisions(20);
+			% precision = precisions(20);
+			precision = precisions;
 		end
 
 	end
